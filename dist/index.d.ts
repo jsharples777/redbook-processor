@@ -1,0 +1,1 @@
+export { RedBookProcessor } from './RedBookProcessor';
