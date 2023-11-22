@@ -281,7 +281,7 @@ export class RedBookProcessor {
                         const whenShouldHaveBeenDoneLast = parseInt(moment().subtract(riskGroup.frequency.value, riskGroup.frequency.unit).format('YYYYMMDD'));
                         if (!this.hasBeenDoneInRequiredInterval(dateAndFieldEntries, whenShouldHaveBeenDoneLast)) {
                             results.push({
-                                message: riskGroup.message, name: riskGroup.name, severity: RiskResultSeverity.normal, actions: riskGroup.actions
+                                message: riskGroup.message, name: risk.name, severity: RiskResultSeverity.normal, actions: riskGroup.actions
                             })
 
                         }
