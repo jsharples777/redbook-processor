@@ -22,7 +22,9 @@ export declare class RedBookProcessor {
     protected isTestValueInAnyOf(value: any, testValues: string): boolean;
     protected doesPatientMeetCriterion(patient: any, criterion: any): boolean;
     protected doesPatientMeetCriteria(patient: any, criteria: any): boolean;
-    protected hasBeenDoneInRequiredInterval(dateAndFieldEntries: RiskDataAndFieldValues[], whenShouldHaveBeenDoneLast: number): boolean;
+    protected doesFieldMatchFieldCriterion(fields: string[], dateAndFieldEntry: RiskDataAndFieldValues, matchTest: any): boolean;
+    protected doesFieldMatchFieldMatchCriteria(fields: string[], entry: RiskDataAndFieldValues, fieldMatch: any): boolean;
+    protected hasBeenDoneInRequiredInterval(fields: string[], dateAndFieldEntries: RiskDataAndFieldValues[], whenShouldHaveBeenDoneLast: number, fieldMatch: any): boolean;
     protected processRisk(patient: any, risk: any, results: RiskResult[]): void;
     processPatient(redbook: any, patient: any): RiskResult[];
 }

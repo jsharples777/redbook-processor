@@ -7,6 +7,8 @@ exports.RedBookProcessor = exports.RiskResultSeverity = void 0;
 const moment_1 = __importDefault(require("moment"));
 const debug_1 = __importDefault(require("debug"));
 const logger = debug_1.default('redbook-processor');
+const dlogger = debug_1.default('redbook-processor-detail');
+const dlogger2 = debug_1.default('redbook-processor-detail-2');
 var RiskResultSeverity;
 (function (RiskResultSeverity) {
     RiskResultSeverity[RiskResultSeverity["normal"] = 0] = "normal";
@@ -197,11 +199,66 @@ class RedBookProcessor {
         }
         return result;
     }
-    hasBeenDoneInRequiredInterval(dateAndFieldEntries, whenShouldHaveBeenDoneLast) {
+    doesFieldMatchFieldCriterion(fields, dateAndFieldEntry, matchTest) {
         let result = false;
-        dateAndFieldEntries.forEach((dateAndFieldEntry) => {
-            if (dateAndFieldEntry.date >= whenShouldHaveBeenDoneLast) {
-                result = true;
+        const fieldIndex = fields.findIndex((field) => field === matchTest.field);
+        if (fieldIndex >= 1) {
+            let fieldValue = dateAndFieldEntry.values[fieldIndex - 1];
+            if (fieldValue) {
+                dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value}`);
+                fieldValue = fieldValue.toLowerCase().trim();
+                let matchValue = matchTest.value;
+                matchValue = matchValue.toLowerCase().trim();
+                switch (matchTest.comparison) {
+                    case "contains": {
+                        result = (fieldValue.indexOf(matchValue) >= 0);
+                        break;
+                    }
+                    case 'eq': {
+                        result = (fieldValue === matchValue);
+                        break;
+                    }
+                    case 'gte': {
+                        result = (fieldValue >= matchValue);
+                        break;
+                    }
+                    case 'gt': {
+                        result = (fieldValue > matchValue);
+                        break;
+                    }
+                    case 'lt': {
+                        result = (fieldValue < matchValue);
+                        break;
+                    }
+                    case 'lte': {
+                        result = (fieldValue <= matchValue);
+                        break;
+                    }
+                    case 'neq': {
+                        result = (fieldValue !== matchValue);
+                        break;
+                    }
+                }
+                dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value} - ${result}`);
+            }
+        }
+        return result;
+    }
+    doesFieldMatchFieldMatchCriteria(fields, entry, fieldMatch) {
+        let result = true;
+        if (fieldMatch) {
+            dlogger2(`field criteria present`);
+            if (!this.doesFieldMatchFieldCriterion(fields, entry, fieldMatch)) {
+                result = false;
+            }
+        }
+        return result;
+    }
+    hasBeenDoneInRequiredInterval(fields, dateAndFieldEntries, whenShouldHaveBeenDoneLast, fieldMatch) {
+        let result = false;
+        dateAndFieldEntries.forEach((entry) => {
+            if (entry.date >= whenShouldHaveBeenDoneLast) {
+                result = this.doesFieldMatchFieldMatchCriteria(fields, entry, fieldMatch);
             }
         });
         return result;
@@ -211,6 +268,7 @@ class RedBookProcessor {
         const riskGroups = measure.riskGroups;
         const fields = measure.fields;
         const sectionFieldName = risk.section;
+        const fieldMatch = measure.fieldMatch;
         // does the patient meet the criteria?
         if (riskGroups) {
             const sortedRiskGroups = riskGroups.sort((a, b) => {
@@ -231,19 +289,24 @@ class RedBookProcessor {
                 }
                 return result;
             });
-            console.log('risk groups sorted');
             let hasBeenProcessed = false;
             sortedRiskGroups.forEach((riskGroup) => {
                 if (!hasBeenProcessed) {
+                    dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity}`);
                     if (this.doesPatientMeetCriteria(patient, riskGroup.criteria)) {
+                        dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, getting field values`);
                         hasBeenProcessed = true;
                         // calculate the frequency value date
                         const dateAndFieldEntries = this.getFieldValuesAndDates(patient, sectionFieldName, fields);
                         const whenShouldHaveBeenDoneLast = parseInt(moment_1.default().subtract(riskGroup.frequency.value, riskGroup.frequency.unit).format('YYYYMMDD'));
-                        if (!this.hasBeenDoneInRequiredInterval(dateAndFieldEntries, whenShouldHaveBeenDoneLast)) {
+                        if (!this.hasBeenDoneInRequiredInterval(fields, dateAndFieldEntries, whenShouldHaveBeenDoneLast, fieldMatch)) {
+                            dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, NOT done in last ${riskGroup.frequency.value} ${riskGroup.frequency.unit}`);
                             results.push({
                                 message: riskGroup.message, name: risk.name, severity: RiskResultSeverity.normal, actions: riskGroup.actions
                             });
+                        }
+                        else {
+                            dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, done in last ${riskGroup.frequency.value} ${riskGroup.frequency.unit}`);
                         }
                     }
                 }
@@ -251,9 +314,11 @@ class RedBookProcessor {
         }
     }
     processPatient(redbook, patient) {
+        logger(`processing patient ${patient._id} using redbook config`);
         const results = [];
         if (redbook.risks) {
             redbook.risks.forEach((risk) => {
+                logger(`processing patient ${patient._id} for risk ${risk.name}`);
                 this.processRisk(patient, risk, results);
             });
         }

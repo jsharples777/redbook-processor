@@ -1,8 +1,9 @@
 import moment from "moment";
 import debug from "debug";
-import {match} from "assert";
 
 const logger = debug('redbook-processor');
+const dlogger = debug('redbook-processor-detail');
+const dlogger2 = debug('redbook-processor-detail-2');
 
 
 type RiskDataAndFieldValues = {
@@ -239,6 +240,7 @@ export class RedBookProcessor {
         if (fieldIndex >= 1) {
             let fieldValue = dateAndFieldEntry.values[fieldIndex - 1];
             if (fieldValue) {
+                dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value}`);
                 fieldValue = fieldValue.toLowerCase().trim();
                 let matchValue = matchTest.value;
                 matchValue = matchValue.toLowerCase().trim();
@@ -278,6 +280,7 @@ export class RedBookProcessor {
                         break;
                     }
                 }
+                dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value} - ${result}`);
             }
 
         }
@@ -286,9 +289,10 @@ export class RedBookProcessor {
     }
 
 
-    protected doesFieldsMatchFieldMatchCriteria(fields:string[],entry:RiskDataAndFieldValues, fieldMatch:any):boolean {
+    protected doesFieldMatchFieldMatchCriteria(fields:string[],entry:RiskDataAndFieldValues, fieldMatch:any):boolean {
         let result = true;
         if (fieldMatch) {
+            dlogger2(`field criteria present`);
             if (!this.doesFieldMatchFieldCriterion(fields, entry, fieldMatch)) {
                 result = false;
             }
@@ -296,14 +300,13 @@ export class RedBookProcessor {
         return result;
     }
 
-    protected hasBeenDoneInRequiredInterval(dateAndFieldEntries: RiskDataAndFieldValues[], whenShouldHaveBeenDoneLast: number, fieldMatch:any): boolean {
+    protected hasBeenDoneInRequiredInterval(fields:string[], dateAndFieldEntries: RiskDataAndFieldValues[], whenShouldHaveBeenDoneLast: number, fieldMatch:any): boolean {
         let result = false;
-        dateAndFieldEntries.forEach((dateAndFieldEntry) => {
-            if (dateAndFieldEntry.date >= whenShouldHaveBeenDoneLast) {
-                result = true;
+        dateAndFieldEntries.forEach((entry) => {
+            if (entry.date >= whenShouldHaveBeenDoneLast) {
+                result = this.doesFieldMatchFieldMatchCriteria(fields,entry,fieldMatch);
             }
         })
-
         return result;
     }
 
@@ -334,21 +337,26 @@ export class RedBookProcessor {
                 }
                 return result;
             });
-            console.log('risk groups sorted');
             let hasBeenProcessed = false;
             sortedRiskGroups.forEach((riskGroup:any) => {
                 if (!hasBeenProcessed) {
+                    dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity}`)
                     if (this.doesPatientMeetCriteria(patient, riskGroup.criteria)) {
+                        dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, getting field values`)
                         hasBeenProcessed = true;
 
                         // calculate the frequency value date
                         const dateAndFieldEntries = this.getFieldValuesAndDates(patient, sectionFieldName, fields);
                         const whenShouldHaveBeenDoneLast = parseInt(moment().subtract(riskGroup.frequency.value, riskGroup.frequency.unit).format('YYYYMMDD'));
-                        if (!this.hasBeenDoneInRequiredInterval(dateAndFieldEntries, whenShouldHaveBeenDoneLast, fieldMatch)) {
+                        if (!this.hasBeenDoneInRequiredInterval(fields, dateAndFieldEntries, whenShouldHaveBeenDoneLast, fieldMatch)) {
+                            dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, NOT done in last ${riskGroup.frequency.value} ${riskGroup.frequency.unit}`);
                             results.push({
                                 message: riskGroup.message, name: risk.name, severity: RiskResultSeverity.normal, actions: riskGroup.actions
                             })
 
+                        }
+                        else {
+                            dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, done in last ${riskGroup.frequency.value} ${riskGroup.frequency.unit}`);
                         }
                     }
                 }
@@ -359,9 +367,11 @@ export class RedBookProcessor {
     }
 
     public processPatient(redbook: any, patient: any): RiskResult[] {
+        logger(`processing patient ${patient._id} using redbook config`);
         const results:RiskResult[] = [];
         if (redbook.risks) {
             redbook.risks.forEach((risk:any) => {
+                logger(`processing patient ${patient._id} for risk ${risk.name}`)
                 this.processRisk(patient, risk, results);
             })
         }
