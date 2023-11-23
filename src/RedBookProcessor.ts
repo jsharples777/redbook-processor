@@ -1,5 +1,6 @@
 import moment from "moment";
 import debug from "debug";
+import {match} from "assert";
 
 const logger = debug('redbook-processor');
 
@@ -232,7 +233,70 @@ export class RedBookProcessor {
         return result;
     }
 
-    protected hasBeenDoneInRequiredInterval(dateAndFieldEntries: RiskDataAndFieldValues[], whenShouldHaveBeenDoneLast: number): boolean {
+    protected doesFieldMatchFieldCriterion(fields:string[],dateAndFieldEntry:RiskDataAndFieldValues, matchTest:any):boolean {
+        let result = false;
+        const fieldIndex = fields.findIndex((field) => field === matchTest.field);
+        if (fieldIndex >= 1) {
+            let fieldValue = dateAndFieldEntry.values[fieldIndex - 1];
+            if (fieldValue) {
+                fieldValue = fieldValue.toLowerCase().trim();
+                let matchValue = matchTest.value;
+                matchValue = matchValue.toLowerCase().trim();
+                switch (matchTest.comparison) {
+                    case "contains": {
+                        result = (fieldValue.indexOf(matchValue) >= 0);
+                        break;
+                    }
+                    case 'eq': {
+
+                        result = (fieldValue === matchValue);
+                        break;
+                    }
+                    case 'gte': {
+
+                        result = (fieldValue >= matchValue);
+                        break;
+                    }
+                    case 'gt': {
+
+                        result = (fieldValue > matchValue);
+                        break;
+                    }
+                    case 'lt': {
+
+                        result = (fieldValue < matchValue);
+                        break;
+                    }
+                    case 'lte': {
+
+                        result = (fieldValue <= matchValue);
+                        break;
+                    }
+                    case 'neq': {
+
+                        result = (fieldValue !== matchValue);
+                        break;
+                    }
+                }
+            }
+
+        }
+
+        return result;
+    }
+
+
+    protected doesFieldsMatchFieldMatchCriteria(fields:string[],entry:RiskDataAndFieldValues, fieldMatch:any):boolean {
+        let result = true;
+        if (fieldMatch) {
+            if (!this.doesFieldMatchFieldCriterion(fields, entry, fieldMatch)) {
+                result = false;
+            }
+        }
+        return result;
+    }
+
+    protected hasBeenDoneInRequiredInterval(dateAndFieldEntries: RiskDataAndFieldValues[], whenShouldHaveBeenDoneLast: number, fieldMatch:any): boolean {
         let result = false;
         dateAndFieldEntries.forEach((dateAndFieldEntry) => {
             if (dateAndFieldEntry.date >= whenShouldHaveBeenDoneLast) {
@@ -248,6 +312,7 @@ export class RedBookProcessor {
         const riskGroups = measure.riskGroups;
         const fields = measure.fields;
         const sectionFieldName = risk.section;
+        const fieldMatch = measure.fieldMatch;
 
         // does the patient meet the criteria?
         if (riskGroups) {
@@ -279,7 +344,7 @@ export class RedBookProcessor {
                         // calculate the frequency value date
                         const dateAndFieldEntries = this.getFieldValuesAndDates(patient, sectionFieldName, fields);
                         const whenShouldHaveBeenDoneLast = parseInt(moment().subtract(riskGroup.frequency.value, riskGroup.frequency.unit).format('YYYYMMDD'));
-                        if (!this.hasBeenDoneInRequiredInterval(dateAndFieldEntries, whenShouldHaveBeenDoneLast)) {
+                        if (!this.hasBeenDoneInRequiredInterval(dateAndFieldEntries, whenShouldHaveBeenDoneLast, fieldMatch)) {
                             results.push({
                                 message: riskGroup.message, name: risk.name, severity: RiskResultSeverity.normal, actions: riskGroup.actions
                             })
