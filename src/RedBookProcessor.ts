@@ -239,15 +239,19 @@ export class RedBookProcessor {
         dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value}`);
         const fieldIndex = fields.findIndex((field) => field === matchTest.field);
         if (fieldIndex >= 1) {
-            let fieldValue = dateAndFieldEntry.values[fieldIndex - 1];
+            let fieldValue = dateAndFieldEntry.values[fieldIndex];
             if (fieldValue) {
 
                 fieldValue = fieldValue.toLowerCase().trim();
                 let matchValue = matchTest.value;
                 matchValue = matchValue.toLowerCase().trim();
+                dlogger2(`Match value is '${matchValue}', field value is '${fieldValue}'`)
                 switch (matchTest.comparison) {
                     case "contains": {
-                        result = (fieldValue.indexOf(matchValue) >= 0);
+                        dlogger2(`contains index ${fieldValue.indexOf(matchValue)}`);
+                        if (fieldValue.indexOf(matchValue) >= 0) {
+                            result = true;
+                        }
                         break;
                     }
                     case 'eq': {
@@ -302,18 +306,29 @@ export class RedBookProcessor {
         let result = true;
         if (fieldMatch) {
             dlogger2(`field criteria present`);
-            if (!this.doesFieldMatchFieldCriterion(fields, entry, fieldMatch)) {
-                result = false;
-            }
+            fieldMatch.forEach((match:any) => {
+                if (!this.doesFieldMatchFieldCriterion(fields, entry, match)) {
+                    result = false;
+                }
+            })
+
         }
         return result;
     }
 
     protected hasBeenDoneInRequiredInterval(fields:string[], dateAndFieldEntries: RiskDataAndFieldValues[], whenShouldHaveBeenDoneLast: number, fieldMatch:any): boolean {
         let result = false;
+        dlogger2(fields);
+        dlogger2(dateAndFieldEntries);
+        dlogger2(fieldMatch);
+        dlogger2(`Should have been last done ${whenShouldHaveBeenDoneLast}`)
         dateAndFieldEntries.forEach((entry) => {
             if (entry.date >= whenShouldHaveBeenDoneLast) {
-                result = this.doesFieldMatchFieldMatchCriteria(fields,entry,fieldMatch);
+
+                if (this.doesFieldMatchFieldMatchCriteria(fields,entry,fieldMatch)) {
+                    result = true;
+                }
+
             }
         })
         return result;
