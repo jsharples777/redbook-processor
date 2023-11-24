@@ -236,11 +236,12 @@ export class RedBookProcessor {
 
     protected doesFieldMatchFieldCriterion(fields:string[],dateAndFieldEntry:RiskDataAndFieldValues, matchTest:any):boolean {
         let result = false;
+        dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value}`);
         const fieldIndex = fields.findIndex((field) => field === matchTest.field);
         if (fieldIndex >= 1) {
             let fieldValue = dateAndFieldEntry.values[fieldIndex - 1];
             if (fieldValue) {
-                dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value}`);
+
                 fieldValue = fieldValue.toLowerCase().trim();
                 let matchValue = matchTest.value;
                 matchValue = matchValue.toLowerCase().trim();
@@ -282,8 +283,16 @@ export class RedBookProcessor {
                 }
                 dlogger2(`Checking field criterion for field ${matchTest.field} with match ${matchTest.comparison} for value ${matchTest.value} - ${result}`);
             }
+            else {
+                dlogger2(`Cannot find field  value for ${matchTest.field} in fields ${dateAndFieldEntry.values}`)
+            }
+
 
         }
+        else {
+            dlogger2(`Cannot find match field ${matchTest.field} in fields ${fields}`)
+        }
+
 
         return result;
     }
