@@ -320,7 +320,7 @@ class RedBookProcessor {
                         if (!this.hasBeenDoneInRequiredInterval(fields, dateAndFieldEntries, whenShouldHaveBeenDoneLast, fieldMatch)) {
                             dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, NOT done in last ${riskGroup.frequency.value} ${riskGroup.frequency.unit}`);
                             results.push({
-                                message: riskGroup.message, name: risk.name, severity: RiskResultSeverity.normal, actions: riskGroup.actions
+                                message: riskGroup.message, name: risk.name, severity: riskGroup.severity, actions: riskGroup.actions
                             });
                         }
                         else {
