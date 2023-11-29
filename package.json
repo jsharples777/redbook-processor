@@ -1,6 +1,6 @@
 {
   "name": "redbook-processor",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Australian GP Redbook Processor",
   "main": "dist/RedBookProcessor.js",
   "types": "dist/RedBookProcessor.d.ts",
