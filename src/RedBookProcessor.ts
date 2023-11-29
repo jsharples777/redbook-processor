@@ -20,7 +20,8 @@ export type RiskResult = {
     name: string,
     message: string,
     severity: RiskResultSeverity,
-    actions?:string[]
+    actions?:string[],
+    passed:boolean
 }
 
 export class RedBookProcessor {
@@ -375,11 +376,14 @@ export class RedBookProcessor {
                         if (!this.hasBeenDoneInRequiredInterval(fields, dateAndFieldEntries, whenShouldHaveBeenDoneLast, fieldMatch)) {
                             dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, NOT done in last ${riskGroup.frequency.value} ${riskGroup.frequency.unit}`);
                             results.push({
-                                message: riskGroup.message, name: risk.name, severity: riskGroup.severity, actions: riskGroup.actions
+                                message: riskGroup.message, name: risk.name, severity: riskGroup.severity, actions: riskGroup.actions, passed:false
                             })
 
                         }
                         else {
+                            results.push({
+                                message: riskGroup.message, name: risk.name, severity: riskGroup.severity, actions: riskGroup.actions, passed:true
+                            })
                             dlogger(`Processing patient ${patient._id} for risk ${risk.name} for riskgroup ${riskGroup.severity} - patient matched criteria, done in last ${riskGroup.frequency.value} ${riskGroup.frequency.unit}`);
                         }
                     }

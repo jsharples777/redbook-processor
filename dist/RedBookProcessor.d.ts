@@ -11,6 +11,7 @@ export declare type RiskResult = {
     message: string;
     severity: RiskResultSeverity;
     actions?: string[];
+    passed: boolean;
 };
 export declare class RedBookProcessor {
     private static _instance;
